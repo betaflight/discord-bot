@@ -85,6 +85,11 @@ class PRService {
               entity!.first_post_id = thread.lastMessageId ?? '';
             }
 
+            let name = `#${pr.number}: ${pr.title} by __${pr.user?.login ?? 'Unknown'}__ - (${repo_name})`;
+            if (name.length > 100) {
+              name = `#${pr.number}: ${pr.title.substring(0, pr.title.length - (name.length - 100))} by __${pr.user?.login ?? 'Unknown'}__ - (${repo_name})`
+            }
+
             thread!.setName(`#${pr.number}: ${pr.title} by __${pr.user?.login ?? 'Unknown'}__ - (${repo_name})`);
 
             const msg = await thread!.messages.fetch(entity!.first_post_id);
