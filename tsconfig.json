@@ -1,0 +1,18 @@
+{
+    "extends": "@sapphire/ts-config",
+    "compilerOptions": {
+        "rootDir": "src",
+        "outDir": "dist",
+        "target": "ES2022",
+        "lib": ["es6"],
+        "types": [
+            "reflect-metadata"
+        ],
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "tsBuildInfoFile": "dist/.tsbuildinfo"
+    },
+    "include": ["src", "types/*.d.ts"]
+}
