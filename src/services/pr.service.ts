@@ -90,7 +90,7 @@ class PRService {
               name = `#${pr.number}: ${pr.title.substring(0, pr.title.length - (name.length - 100))} by __${pr.user?.login ?? 'Unknown'}__ - (${repo_name})`
             }
 
-            thread!.setName(`#${pr.number}: ${pr.title} by __${pr.user?.login ?? 'Unknown'}__ - (${repo_name})`);
+            thread!.setName(name);
 
             const msg = await thread!.messages.fetch(entity!.first_post_id);
 
@@ -103,8 +103,12 @@ class PRService {
     }
 
     private async makeThread(channel: ForumChannel, pr: any, repo: string, body: string) {
+        let name = `#${pr.number}: ${pr.title} by __${pr.user?.login ?? 'Unknown'}__ - (${repo})`;
+        if (name.length > 100) {
+          name = `#${pr.number}: ${pr.title.substring(0, pr.title.length - (name.length - 100))} by __${pr.user?.login ?? 'Unknown'}__ - (${repo})`
+        }
         return await channel.threads.create({
-            name: `#${pr.number}: ${pr.title} by ${pr.user?.login ?? 'Unknown'} - (${repo})`,
+            name: name,
             message: this.buildPrPost(pr, body)
         })
     }
@@ -121,6 +125,9 @@ class PRService {
                 name: 'Author',
                 value: pr.user?.login ?? '<Unknown>',
                 inline: true
+              }, {
+                name: 'Title',
+                value: pr.title,
               }, {
                 name: 'Labels',
                 value: pr.labels.map((l: any) => l.name).join(', '),
