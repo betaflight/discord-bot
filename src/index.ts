@@ -3,6 +3,7 @@ import "reflect-metadata";
 
 import { SapphireClient, LogLevel } from "@sapphire/framework";
 import {
+  ClientOptions,
   GatewayIntentBits,
   PermissionFlagsBits,
   OAuth2Scopes,
@@ -18,7 +19,7 @@ import { PRService } from "./services/pr.service";
 import database from "./database";
 import GitHub from "./github";
 
-const client = new SapphireClient({
+const clientConfig: ClientOptions = {
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
@@ -29,11 +30,16 @@ const client = new SapphireClient({
     GatewayIntentBits.GuildMessageReactions,
   ],
   loadMessageCommandListeners: true,
-  defaultPrefix: "!",
   logger: {
     level: LogLevel.Debug,
   },
-});
+};
+
+if (config.env === "dev") {
+  clientConfig.defaultPrefix = "!";
+}
+
+const client = new SapphireClient(clientConfig);
 
 async function run() {
   await db.init();
