@@ -85,7 +85,7 @@ export default class GitHub {
     return entity;
   }
 
-  async fetchComments(repo: string, pr: number, timestamp: string | null): Promise<OctokitResponse<GitHubComment[]>> {
+  async fetchComments(repo: string, pr: number, timestamp?: string): Promise<OctokitResponse<GitHubComment[]>> {
     const request: {
       owner: string;
       repo: string;

@@ -5,6 +5,7 @@ import { ButtonStyle } from 'discord.js';
 import database from '../database';
 import { ActionRowBuilder, ButtonBuilder, EmbedBuilder } from '@discordjs/builders';
 import GitHub from "../github";import type { PullRequest } from '../../types/global';
+import { chunks } from '../helper';
 ;
 
 @autoInjectable()
@@ -81,8 +82,10 @@ class PRService {
         await this.createOrUpdateThread(channel, thread, entity!.first_post_id, pr, repo_name, body);
       }
 
-      if (entity) {
+      if (entity && thread) {
         await database.repos.PullRequestRepository.save(entity);
+
+        await this.processComments(thread, pr.number);
       }
     }
 
@@ -106,7 +109,6 @@ class PRService {
               name: name,
               message: message
           });
-          await this.processComments(t, pr.number);
           return t;
         }
 
@@ -114,20 +116,58 @@ class PRService {
         
         const msg = await thread.messages.fetch(first_post_id!);
 
-        await this.processComments(thread, pr.number);
-
         return await msg.edit(message);
     }
 
-    private async processComments(thread: ThreadChannel, pr: number) {
+    public async processComments(thread: ThreadChannel, pr: number) {
       const entity = await database.repos.PullRequestRepository.findOneBy({
         github_number: pr,
       });
 
-      const comments = await this._github.fetchComments(entity!.repo_name, pr, entity!.last_comment_timestamp);
+      if (entity) {
+        const comments = await this._github.fetchComments(entity.repo_name, pr, entity.last_comment_timestamp);
+        for(const chunk of chunks(comments.data, 10)) {
+          const embeds: EmbedBuilder[] = [];
+          for(const comment of chunk) {
+            if (comment.created_at === entity.last_comment_timestamp) {
+              continue;
+            }
+            embeds.push(
+              new EmbedBuilder()
+                .setColor(0xffff00)
+                .setThumbnail(comment.user?.avatar_url ?? '')
+                .addFields({
+                  name: "Author",
+                  value: comment.user?.login ?? 'UNKNOWN',
+                  inline: true
+                }, {
+                  name: "Created at",
+                  value: comment.created_at,
+                  inline: true
+                }, {
+                  name: "Url",
+                  value: comment.html_url,
+                })
+                .setDescription(this.cleanBody(comment.body ?? ''))
+            )
+          }
+          if (embeds.length > 0) {
+            await thread.send({
+              embeds
+            })
+          }
+        }
+        entity.last_comment_timestamp = comments.data[comments.data.length - 1].updated_at;
+        await database.manager.save(entity);
+      }
+    }
 
-      console.log(thread, comments);
-  
+    private cleanBody(body: string) {
+      let cleaned = body;
+
+      cleaned = cleaned.replace(/<img.*?>/g, '');
+
+      return cleaned;
     }
 
     private buildPrPost(pr: PullRequest, body: string): BaseMessageOptions {
