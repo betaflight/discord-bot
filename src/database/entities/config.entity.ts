@@ -9,7 +9,7 @@ export class ConfigEntity {
   name!: string;
 
   @Column({
-    default: ''
+    default: ""
   })
   guild_id!: string;
 

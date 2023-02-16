@@ -3,9 +3,9 @@ import { PRStatus, PullRequestEntity } from './../database/entities/pull_request
 import type { ForumChannel, ThreadChannel, BaseMessageOptions } from 'discord.js';
 import { ButtonStyle } from 'discord.js';
 import database from '../database';
-import type { RestEndpointMethodTypes } from '@octokit/plugin-rest-endpoint-methods';
 import { ActionRowBuilder, ButtonBuilder, EmbedBuilder } from '@discordjs/builders';
-import GitHub from "../github";
+import GitHub from "../github";import type { PullRequest } from '../../types/global';
+;
 
 @autoInjectable()
 class PRService {
@@ -44,115 +44,136 @@ class PRService {
         }
     }
 
-    public async process(pr: ArrayElement<RestEndpointMethodTypes["pulls"]["list"]["response"]["data"]>, repo_name: string, channel: ForumChannel) {
-        let entity = await database.repos.PullRequestRepository.findOneBy({
-            github_number: pr.number,
-            repo_name,
-          });
+    public async process(pr: PullRequest, repo_name: string, channel: ForumChannel) {
+      let entity = await database.repos.PullRequestRepository.findOneBy({
+        github_number: pr.number,
+        repo_name,
+      });
 
-          if (!entity) {
-            entity = new PullRequestEntity();
-            entity!.github_number = pr.number;
-            entity!.repo_name = repo_name;
-            entity!.name = pr.title;
-          }
+      if (!entity) {
+        entity = new PullRequestEntity();
+        entity!.github_number = pr.number;
+        entity!.repo_name = repo_name;
+        entity!.name = pr.title;
+      }
 
-          let thread: ThreadChannel | null = null;
+      let thread: ThreadChannel | null = null;
 
-          let body = pr.body;
+      let body = pr.body;
 
-          if (!body || body.length === 0) {
-              body = "No description provided";
-          }
+      if (!body || body.length === 0) {
+          body = "No description provided";
+      }
 
-          if (body.length > 4095) {
-              body = body.substring(0, 4092) + "...";
-          }
+      if (body.length > 4095) {
+          body = body.substring(0, 4092) + "...";
+      }
 
-          if (!entity!.forum_thread_id) {
-            thread = await this.makeThread(channel, pr, repo_name, body);
+      if (!entity!.forum_thread_id) {
+        thread = (await this.createOrUpdateThread(channel, null, null, pr, repo_name, body) as ThreadChannel);
 
-            entity!.forum_thread_id = thread.id;
-            entity!.first_post_id = thread.lastMessageId ?? '';
+        entity!.forum_thread_id = thread.id;
+        entity!.first_post_id = thread.lastMessageId ?? '';
 
-          } else {
-            thread = await channel.threads.fetch(entity!.forum_thread_id);
+      } else {
+        thread = await channel.threads.fetch(entity!.forum_thread_id);
 
-            if (!thread) {
-              thread = await this.makeThread(channel, pr, repo_name, body);
+        await this.createOrUpdateThread(channel, thread, entity!.first_post_id, pr, repo_name, body);
+      }
 
-              entity!.forum_thread_id = thread.id;
-              entity!.first_post_id = thread.lastMessageId ?? '';
-            }
-
-            let name = `#${pr.number}: ${pr.title} by __${pr.user?.login ?? 'Unknown'}__ - (${repo_name})`;
-            if (name.length > 100) {
-              name = `#${pr.number}: ${pr.title.substring(0, pr.title.length - (name.length - 100))} by __${pr.user?.login ?? 'Unknown'}__ - (${repo_name})`
-            }
-
-            thread!.setName(name);
-
-            const msg = await thread!.messages.fetch(entity!.first_post_id);
-
-            msg.edit(this.buildPrPost(pr, body))
-          }
-
-          if (entity) {
-            await database.repos.PullRequestRepository.save(entity);
-          }
+      if (entity) {
+        await database.repos.PullRequestRepository.save(entity);
+      }
     }
 
-    private async makeThread(channel: ForumChannel, pr: any, repo: string, body: string) {
+    private async createOrUpdateThread(
+      channel: ForumChannel,
+      thread: ThreadChannel | null, 
+      first_post_id: string | null,
+      pr: PullRequest,
+      repo: string,
+      body: string
+    ) {
         let name = `#${pr.number}: ${pr.title} by __${pr.user?.login ?? 'Unknown'}__ - (${repo})`;
         if (name.length > 100) {
           name = `#${pr.number}: ${pr.title.substring(0, pr.title.length - (name.length - 100))} by __${pr.user?.login ?? 'Unknown'}__ - (${repo})`
         }
-        return await channel.threads.create({
-            name: name,
-            message: this.buildPrPost(pr, body)
-        })
+
+        const message = this.buildPrPost(pr, body);
+
+        if (!thread) {
+          const t = await channel.threads.create({
+              name: name,
+              message: message
+          });
+          await this.processComments(t, pr.number);
+          return t;
+        }
+
+        thread.setName(name);
+        
+        const msg = await thread.messages.fetch(first_post_id!);
+
+        await this.processComments(thread, pr.number);
+
+        return await msg.edit(message);
     }
 
-    private buildPrPost(pr: any, body: string): BaseMessageOptions {
-        return {
-          embeds: [
-            new EmbedBuilder()
-              .addFields({
-                name: 'Number',
-                value: `${pr.number}`,
-                inline: true
-              }, {
-                name: 'Author',
-                value: pr.user?.login ?? '<Unknown>',
-                inline: true
-              }, {
-                name: 'Title',
-                value: pr.title,
-              }, {
-                name: 'Labels',
-                value: pr.labels.map((l: any) => l.name).join(', '),
-              }, {
-                  name: "URL",
-                  value: pr.html_url
-              }),
-            new EmbedBuilder()
-              .setDescription(body)
-          ],
-          components: [
-            new ActionRowBuilder<ButtonBuilder>()
-              .addComponents(
-                new ButtonBuilder()
-                  .setCustomId(`${pr.number}-pr-button`)
-                  .setLabel("Copy pr number")
-                  .setStyle(ButtonStyle.Primary),
-                new ButtonBuilder()
-                  .setCustomId(`${pr.number}-comment-button`)
-                  .setLabel("Add comment")
-                  .setStyle(ButtonStyle.Success)
-              )
-          ]
-        };
-      }
+    private async processComments(thread: ThreadChannel, pr: number) {
+      const entity = await database.repos.PullRequestRepository.findOneBy({
+        github_number: pr,
+      });
+
+      const comments = await this._github.fetchComments(entity!.repo_name, pr, entity!.last_comment_timestamp);
+
+      console.log(thread, comments);
+  
+    }
+
+    private buildPrPost(pr: PullRequest, body: string): BaseMessageOptions {
+      return {
+        embeds: [
+          new EmbedBuilder()
+            .addFields({
+              name: 'Number',
+              value: `${pr.number}`,
+              inline: true
+            }, {
+              name: 'Author',
+              value: pr.user?.login ?? '<Unknown>',
+              inline: true
+            }, {
+              name: 'Title',
+              value: pr.title,
+            }, {
+              name: 'Labels',
+              value: pr.labels.map((l: any) => l.name).join(', '),
+            }, {
+                name: "URL",
+                value: pr.html_url
+            }),
+          new EmbedBuilder()
+            .setDescription(body)
+        ],
+        components: [
+          new ActionRowBuilder<ButtonBuilder>()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId(`${pr.number}-pr-button`)
+                .setLabel("PR number")
+                .setStyle(ButtonStyle.Primary),
+              new ButtonBuilder()
+                .setCustomId(`${pr.number}-comment-button`)
+                .setLabel("Add comment")
+                .setStyle(ButtonStyle.Success),
+              new ButtonBuilder()
+                .setCustomId(`${pr.number}-refresh-button`)
+                .setLabel("Refresh")
+                .setStyle(ButtonStyle.Danger)
+            )
+        ]
+      };
+    }
 }
 
 export { PRService };

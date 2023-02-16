@@ -34,6 +34,11 @@ export class PullRequestEntity {
   first_post_id!: string;
 
   @Column({
+    default: ''
+  })
+  last_comment_timestamp!: string;
+
+  @Column({
     default: PRStatus.Unset,
   })
   status!: PRStatus;

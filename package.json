@@ -29,9 +29,9 @@
     "@sapphire/framework": "^4.0.2",
     "discord.js": "^14.7.1",
     "dotenv": "^16.0.3",
+    "mysql2": "^2.3.3",
     "node-schedule": "^2.1.1",
     "reflect-metadata": "^0.1.13",
-    "sqlite3": "^5.1.4",
     "tsyringe": "^4.7.0",
     "typeorm": "^0.3.11"
   },

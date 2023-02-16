@@ -15,7 +15,11 @@ export default {
     token: process.env.GITHUB_TOKEN ?? null,
     repos: (process.env.GITHUB_REPOS ?? "").split(",").map(t),
   },
-  hints: {
-    init: process.env.INIT_HINT ?? null,
-  },
+  database: {
+    host: process.env.DB_HOST,
+    port: parseInt(process.env.DB_PORT ?? "3306"),
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_DATABASE,
+  }
 };

@@ -3,14 +3,19 @@ import { RepositoryEntity } from "./entities/repository.entity";
 import { PullRequestEntity } from "./entities/pull_request.entity";
 import { ConfigEntity } from "./entities/config.entity";
 import { DataSource } from "typeorm";
+import config from "../config/env";
 
 class Database {
   private db: DataSource;
 
   constructor() {
     this.db = new DataSource({
-      type: "sqlite",
-      database: "database.sqlite",
+      type: "mariadb",
+      host: config.database.host,
+      port: config.database.port,
+      username: config.database.user,
+      password: config.database.password,
+      database: config.database.database,
       synchronize: true,
       entities: [RepositoryEntity, ConfigEntity, PullRequestEntity, ReactionCounterEntity],
     });

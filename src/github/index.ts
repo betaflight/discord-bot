@@ -4,17 +4,13 @@ import { Octokit, RestEndpointMethodTypes } from "@octokit/rest";
 import config from "../config/env";
 import db from "../database";
 import { autoInjectable } from "tsyringe";
+import type { OctokitResponse } from "@octokit/types";
+import type { ArrayElement } from "../../types/global";
 
-export const GITHUB = Symbol.for("IGitHub");
-
-export interface IGitHub {
-  getPullRequest(repo: string, n: number): Promise<RestEndpointMethodTypes["pulls"]["get"]["response"]>;
-  getPullRequests(repo: string): Promise<RestEndpointMethodTypes["pulls"]["list"]["response"]>;
-  getTestingRequiredPullRequests(repo: string): Promise<RestEndpointMethodTypes["pulls"]["list"]["response"] | null>;
-}
+export type GitHubComment = ArrayElement<RestEndpointMethodTypes["issues"]["listComments"]["response"]["data"]>;
 
 @autoInjectable()
-export default class GitHub implements IGitHub {
+export default class GitHub {
   private octokit: Octokit;
 
   constructor() {
@@ -87,6 +83,23 @@ export default class GitHub implements IGitHub {
     });
 
     return entity;
+  }
+
+  async fetchComments(repo: string, pr: number, timestamp: string | null): Promise<OctokitResponse<GitHubComment[]>> {
+    const request: {
+      owner: string;
+      repo: string;
+      issue_number: number;
+      since?: string;
+    } = {
+      owner: config.github.org ?? "",
+      repo: repo,
+      issue_number: pr,
+    };
+    if (timestamp) {
+      request.since = timestamp;
+    }
+    return await this.octokit.issues.listComments(request);
   }
 
   async addComment(repo: string, pr: number, body: string, user: User) {
