@@ -5,8 +5,6 @@ import { ButtonStyle } from 'discord.js';
 import database from '../database';
 import { ActionRowBuilder, ButtonBuilder, EmbedBuilder } from '@discordjs/builders';
 import GitHub from "../github";import type { PullRequest } from '../../types/global';
-import { chunks } from '../helper';
-;
 
 @autoInjectable()
 class PRService {
@@ -126,37 +124,33 @@ class PRService {
 
       if (entity) {
         const comments = await this._github.fetchComments(entity.repo_name, pr, entity.last_comment_timestamp);
-        for(const chunk of chunks(comments.data, 10)) {
-          const embeds: EmbedBuilder[] = [];
-          for(const comment of chunk) {
-            if (comment.created_at === entity.last_comment_timestamp) {
-              continue;
-            }
-            embeds.push(
+
+        for(const comment of comments.data) {
+          if (comment.created_at === entity.last_comment_timestamp) {
+            continue;
+          }
+          await thread.send({
+            embeds: [
               new EmbedBuilder()
-                .setColor(0xffff00)
-                .setThumbnail(comment.user?.avatar_url ?? '')
-                .addFields({
-                  name: "Author",
-                  value: comment.user?.login ?? 'UNKNOWN',
-                  inline: true
-                }, {
-                  name: "Created at",
-                  value: comment.created_at,
-                  inline: true
-                }, {
-                  name: "Url",
-                  value: comment.html_url,
-                })
-                .setDescription(this.cleanBody(comment.body ?? ''))
-            )
-          }
-          if (embeds.length > 0) {
-            await thread.send({
-              embeds
-            })
-          }
+              .setColor(0xffff00)
+              .setThumbnail(comment.user?.avatar_url ?? '')
+              .addFields({
+                name: "Author",
+                value: comment.user?.login ?? 'UNKNOWN',
+                inline: true
+              }, {
+                name: "Created at",
+                value: comment.created_at,
+                inline: true
+              }, {
+                name: "Url",
+                value: comment.html_url,
+              })
+              .setDescription(this.cleanBody(comment.body ?? ''))
+            ]
+          })
         }
+    
         entity.last_comment_timestamp = comments.data[comments.data.length - 1].updated_at;
         await database.manager.save(entity);
       }
@@ -167,7 +161,7 @@ class PRService {
 
       cleaned = cleaned.replace(/<img.*?>/g, '');
 
-      return cleaned;
+      return cleaned.length > 6000 ? cleaned.substring(0, 5997) + "..." : cleaned;
     }
 
     private buildPrPost(pr: PullRequest, body: string): BaseMessageOptions {
