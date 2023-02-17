@@ -146,7 +146,7 @@ class PRService {
           if (!latest || dayjs(comment.updated_at).isAfter(dayjs(latest))) {
             latest = comment.updated_at;
           }
-          if (dayjs(comment.updated_at).isAfter(dayjs(entity.last_comment_timestamp))) {
+          if (!entity.last_comment_timestamp || dayjs(comment.updated_at).isAfter(dayjs(entity.last_comment_timestamp))) {
             await thread.send({
               embeds: [
                 new EmbedBuilder()
