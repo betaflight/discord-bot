@@ -158,7 +158,7 @@ async function run() {
         new EmbedBuilder(msg.embeds[0].toJSON())
           .setDescription(`Cleaning: done (${cleanTime})\nCrawling: done (${timer.toString()})`)
           .setFooter({
-            text: 'total: ' + totalTimer.toString() + 'ms'
+            text: 'total: ' + totalTimer.toString()
           })
       ]
     })
