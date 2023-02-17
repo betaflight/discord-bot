@@ -4,7 +4,9 @@ import type { ForumChannel, ThreadChannel, BaseMessageOptions } from 'discord.js
 import { ButtonStyle } from 'discord.js';
 import database from '../database';
 import { ActionRowBuilder, ButtonBuilder, EmbedBuilder } from '@discordjs/builders';
-import GitHub from "../github";import type { PullRequest } from '../../types/global';
+import GitHub from "../github";
+import type { PullRequest } from '../../types/global';
+import dayjs from 'dayjs';
 
 @autoInjectable()
 class PRService {
@@ -135,9 +137,14 @@ class PRService {
       if (entity) {
         const comments = await this._github.fetchComments(entity.repo_name, pr, entity.last_comment_timestamp);
 
-        for(const comment of comments.data) {
-          if (comment.created_at === entity.last_comment_timestamp) {
+        let latest: string | null | undefined  = entity.last_comment_timestamp;
+
+        for(const comment of comments.data.sort((a, b) => dayjs(a.created_at).isAfter(dayjs(b.created_at)) ? 1 : -1)) {
+          if (comment.updated_at === entity.last_comment_timestamp) {
             continue;
+          }
+          if (!latest || dayjs(comment.updated_at).isAfter(dayjs(latest))) {
+            latest = comment.updated_at;
           }
           await thread.send({
             embeds: [
@@ -161,8 +168,11 @@ class PRService {
           })
         }
     
-        entity.last_comment_timestamp = comments.data[comments.data.length - 1].updated_at;
-        await database.manager.save(entity);
+        if (latest) {
+          entity.last_comment_timestamp = latest ?? '';
+
+          await database.manager.save(entity);
+        }
       }
     }
 

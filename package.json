@@ -27,6 +27,7 @@
   "dependencies": {
     "@octokit/rest": "^19.0.7",
     "@sapphire/framework": "^4.0.2",
+    "dayjs": "^1.11.7",
     "discord.js": "^14.7.1",
     "dotenv": "^16.0.3",
     "mysql2": "^2.3.3",
