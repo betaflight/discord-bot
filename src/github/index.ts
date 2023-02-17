@@ -9,6 +9,8 @@ import type { ArrayElement } from "../../types/global";
 
 export type GitHubComment = ArrayElement<RestEndpointMethodTypes["issues"]["listComments"]["response"]["data"]>;
 
+let inited = false;
+
 @autoInjectable()
 export default class GitHub {
   private octokit: Octokit;
@@ -26,12 +28,15 @@ export default class GitHub {
       auth: config.github.token,
     });
 
-    this.init();
+    if (!inited) {
+      this.init();
+      inited = true;
+    }
   }
 
   async init() {
     for (let i = 0; i < config.github.repos.length; ++i) {
-      let repo = await db.manager.findOneBy(RepositoryEntity, {
+      let repo = await db.repos.RepositoryRepository.findOneBy({
         name: config.github.repos[i],
       });
 

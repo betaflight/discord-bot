@@ -80,7 +80,12 @@ class PRService {
         entity!.first_post_id = thread.lastMessageId ?? '';
 
       } else {
-        thread = await channel.threads.fetch(entity!.forum_thread_id);
+        try {
+          thread = await channel.threads.fetch(entity!.forum_thread_id);
+        } catch (e) {
+          await database.repos.PullRequestRepository.delete({ id: entity!.id });
+          return;
+        }
 
         await this.createOrUpdateThread(channel, thread, entity!.first_post_id, pr, repo_name, body);
       }
