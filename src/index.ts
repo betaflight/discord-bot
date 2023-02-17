@@ -1,5 +1,6 @@
-import { EmbedBuilder } from '@discordjs/builders';
 import "reflect-metadata";
+import { EmbedBuilder } from '@discordjs/builders';
+import { Stopwatch } from '@sapphire/stopwatch';
 
 import { SapphireClient, LogLevel } from "@sapphire/framework";
 import {
@@ -113,15 +114,24 @@ async function run() {
       ]
     });
 
+    const timer = new Stopwatch(2);
+    timer.start();
+
     await prService.clean(forum_channel);
+
+    timer.stop();
+    const cleanTime = timer.toString();
 
     await msg.edit({
       embeds: [
         new EmbedBuilder(msg.embeds[0].toJSON())
-          .setDescription("Cleaning: done\nCrawling: processing")
+          .setDescription(`Cleaning: done (${cleanTime})\nCrawling: processing`)
       ]
     })
-    
+
+    timer.reset();
+    timer.start();
+
     for (const repo of config.github.repos) {
       const prs = await github.getTestingRequiredPullRequests(repo);
 
@@ -140,12 +150,14 @@ async function run() {
       }
     }
 
+    timer.stop();
+
     await msg.edit({
       embeds: [
         new EmbedBuilder(msg.embeds[0].toJSON())
-          .setDescription("Cleaning: done\nCrawling: done")
+          .setDescription(`Cleaning: done (${cleanTime})\nCrawling: done (${timer.toString()})`)
           .setFooter({
-            text: msg.embeds[0].footer!.text + ", end: " + new Date().toLocaleString()
+            text: 'total: ' + (cleanTime + timer.duration) + 'ms'
           })
       ]
     })

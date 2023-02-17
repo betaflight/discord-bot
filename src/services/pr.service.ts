@@ -29,7 +29,7 @@ class PRService {
             const gh_entity = await this._github!.getPullRequest(entity.repo_name, entity.github_number);
             const thread = await channel.threads.fetch(entity.forum_thread_id);
 
-            if (!gh_entity) {
+            if (!gh_entity.data || gh_entity.data.state === 'closed') {
 
                 if (thread) {
                     await thread.setArchived(true, "pr deleted");
