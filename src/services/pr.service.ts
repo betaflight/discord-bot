@@ -93,9 +93,9 @@ class PRService {
       }
 
       if (entity && thread) {
-        await database.repos.PullRequestRepository.save(entity);
+        entity = await database.repos.PullRequestRepository.save(entity);
 
-        await this.processComments(thread, pr.number);
+        await this.processComments(entity, thread, pr.number);
       }
     }
 
@@ -107,9 +107,9 @@ class PRService {
       repo: string,
       body: string
     ) {
-        let name = `#${pr.number}: ${pr.title} by __${pr.user?.login ?? 'Unknown'}__ - (${repo})`;
+        let name = `#${pr.number}: ${pr.title} by ${pr.user?.login ?? 'Unknown'} - (${repo})`;
         if (name.length > 100) {
-          name = `#${pr.number}: ${pr.title.substring(0, pr.title.length - (name.length - 100))} by __${pr.user?.login ?? 'Unknown'}__ - (${repo})`
+          name = `#${pr.number}: ${pr.title.substring(0, pr.title.length - (name.length - 100))} by ${pr.user?.login ?? 'Unknown'} - (${repo})`
         }
 
         const message = this.buildPrPost(pr, body);
@@ -129,52 +129,46 @@ class PRService {
         return await msg.edit(message);
     }
 
-    public async processComments(thread: ThreadChannel, pr: number) {
-      const entity = await database.repos.PullRequestRepository.findOneBy({
-        github_number: pr,
-      });
+    public async processComments(entity: PullRequestEntity, thread: ThreadChannel, pr: number) {
+      const comments = await this._github.fetchComments(entity.repo_name, pr, entity.last_comment_timestamp);
 
-      if (entity) {
-        const comments = await this._github.fetchComments(entity.repo_name, pr, entity.last_comment_timestamp);
+      let latest: string | null | undefined  = entity.last_comment_timestamp;
 
-        let latest: string | null | undefined  = entity.last_comment_timestamp;
-
-        for(const comment of comments.data.sort((a, b) => dayjs(a.created_at).isAfter(dayjs(b.created_at)) ? 1 : -1)) {
-          if (comment.updated_at === entity.last_comment_timestamp) {
-            continue;
-          }
-          if (!latest || dayjs(comment.updated_at).isAfter(dayjs(latest))) {
-            latest = comment.updated_at;
-          }
-          if (!entity.last_comment_timestamp || dayjs(comment.updated_at).isAfter(dayjs(entity.last_comment_timestamp))) {
-            await thread.send({
-              embeds: [
-                new EmbedBuilder()
-                .setColor(0xffff00)
-                .setThumbnail(comment.user?.avatar_url ?? '')
-                .addFields({
-                  name: "Author",
-                  value: comment.user?.login ?? 'UNKNOWN',
-                  inline: true
-                }, {
-                  name: "Created at",
-                  value: comment.created_at,
-                  inline: true
-                }, {
-                  name: "Url",
-                  value: comment.html_url,
-                })
-                .setDescription(this.cleanBody(comment.body ?? ''))
-              ]
-            })
-          }
+      for(const comment of comments.data.sort((a, b) => dayjs(a.created_at).isAfter(dayjs(b.created_at)) ? 1 : -1)) {
+        if (comment.updated_at === entity.last_comment_timestamp) {
+          continue;
         }
-    
-        if (latest) {
-          entity.last_comment_timestamp = latest ?? '';
-
-          await database.manager.save(entity);
+        if (!latest || dayjs(comment.updated_at).isAfter(dayjs(latest))) {
+          latest = comment.updated_at;
         }
+        if (!entity.last_comment_timestamp || dayjs(comment.updated_at).isAfter(dayjs(entity.last_comment_timestamp))) {
+          await thread.send({
+            embeds: [
+              new EmbedBuilder()
+              .setColor(0xffff00)
+              .setThumbnail(comment.user?.avatar_url ?? '')
+              .addFields({
+                name: "Author",
+                value: comment.user?.login ?? 'UNKNOWN',
+                inline: true
+              }, {
+                name: "Created at",
+                value: comment.created_at,
+                inline: true
+              }, {
+                name: "Url",
+                value: comment.html_url,
+              })
+              .setDescription(this.cleanBody(comment.body ?? ''))
+            ]
+          })
+        }
+      }
+  
+      if (latest) {
+        entity.last_comment_timestamp = latest ?? '';
+
+        await database.repos.PullRequestRepository.save(entity);
       }
     }
 
