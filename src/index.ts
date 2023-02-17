@@ -108,11 +108,11 @@ async function run() {
       embeds: [
         new EmbedBuilder()
           .setDescription("Cleaning: processing\nCrawling: processing")
-          .setFooter({
-            text: "Start: " + new Date().toLocaleString()
-          })
       ]
     });
+
+    const totalTimer = new Stopwatch(2);
+    totalTimer.start();
 
     const timer = new Stopwatch(2);
     timer.start();
@@ -151,13 +151,14 @@ async function run() {
     }
 
     timer.stop();
+    totalTimer.stop();
 
     await msg.edit({
       embeds: [
         new EmbedBuilder(msg.embeds[0].toJSON())
           .setDescription(`Cleaning: done (${cleanTime})\nCrawling: done (${timer.toString()})`)
           .setFooter({
-            text: 'total: ' + (cleanTime + timer.duration) + 'ms'
+            text: 'total: ' + totalTimer.toString() + 'ms'
           })
       ]
     })
