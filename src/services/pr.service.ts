@@ -21,6 +21,11 @@ class PRService {
         for (let i = 0; i < entities.length; ++i) {
             const entity = entities[i];
 
+            if (!entity.github_number || entity.github_number === 0) {
+              await database.repos.PullRequestRepository.delete({ id: entity.id });
+              continue;
+            }
+
             const gh_entity = await this._github!.getPullRequest(entity.repo_name, entity.github_number);
             const thread = await channel.threads.fetch(entity.forum_thread_id);
 
