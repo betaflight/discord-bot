@@ -146,26 +146,28 @@ class PRService {
           if (!latest || dayjs(comment.updated_at).isAfter(dayjs(latest))) {
             latest = comment.updated_at;
           }
-          await thread.send({
-            embeds: [
-              new EmbedBuilder()
-              .setColor(0xffff00)
-              .setThumbnail(comment.user?.avatar_url ?? '')
-              .addFields({
-                name: "Author",
-                value: comment.user?.login ?? 'UNKNOWN',
-                inline: true
-              }, {
-                name: "Created at",
-                value: comment.created_at,
-                inline: true
-              }, {
-                name: "Url",
-                value: comment.html_url,
-              })
-              .setDescription(this.cleanBody(comment.body ?? ''))
-            ]
-          })
+          if (dayjs(comment.updated_at).isAfter(dayjs(entity.last_comment_timestamp))) {
+            await thread.send({
+              embeds: [
+                new EmbedBuilder()
+                .setColor(0xffff00)
+                .setThumbnail(comment.user?.avatar_url ?? '')
+                .addFields({
+                  name: "Author",
+                  value: comment.user?.login ?? 'UNKNOWN',
+                  inline: true
+                }, {
+                  name: "Created at",
+                  value: comment.created_at,
+                  inline: true
+                }, {
+                  name: "Url",
+                  value: comment.html_url,
+                })
+                .setDescription(this.cleanBody(comment.body ?? ''))
+              ]
+            })
+          }
         }
     
         if (latest) {
