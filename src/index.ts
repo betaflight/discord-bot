@@ -9,7 +9,8 @@ import {
   PermissionFlagsBits,
   OAuth2Scopes,
   ForumChannel,
-  TextChannel
+  TextChannel,
+  GuildForumTag
 } from "discord.js";
 
 import * as schedule from 'node-schedule';
@@ -83,17 +84,38 @@ async function run() {
   const prService = new PRService();
   const github = new GitHub();
 
+  const forum_channel_config = await database.repos.ConfigRepository.findOneBy({
+    name: 'forum-channel'
+  });
+
+  if (forum_channel_config) {
+    const forum_channel = (await client.channels.fetch(forum_channel_config.value)) as ForumChannel;
+    const repo_tags = config.github.tags;
+    const tags: GuildForumTag[] = [];
+    for(const name of repo_tags) {
+      const tag = {
+        name,
+        moderated: true
+      } as GuildForumTag;
+      if (forum_channel.availableTags.find(t => t.name === tag.name)) {
+        tag.id = forum_channel.availableTags.find(t => t.name === tag.name)!.id;
+      }
+      tags.push(tag);
+    }
+    await forum_channel.setAvailableTags(tags);
+  }
+
   const labels = config.labels.map(l => l.toLowerCase());
 
   // @ts-ignore
   const job = async () => {
     const forum_channel_config = await database.repos.ConfigRepository.findOneBy({
-        name: 'forum-channel'
+      name: 'forum-channel'
     });
 
     const spam_channel_config = await database.repos.ConfigRepository.findOneBy({
       name: 'bot-channel'
-  });
+    });
 
     if (!forum_channel_config || !spam_channel_config) {
         return null;

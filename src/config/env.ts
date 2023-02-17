@@ -14,6 +14,7 @@ export default {
     org: process.env.GITHUB_ORG,
     token: process.env.GITHUB_TOKEN ?? null,
     repos: (process.env.GITHUB_REPOS ?? "").split(",").map(t),
+    tags: (process.env.GITHUB_TAGS ?? "").split(",").map(t),
   },
   database: {
     host: process.env.DB_HOST,

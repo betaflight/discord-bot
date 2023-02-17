@@ -1,12 +1,13 @@
 import { autoInjectable } from 'tsyringe';
 import { PRStatus, PullRequestEntity } from './../database/entities/pull_request.entity';
 import type { ForumChannel, ThreadChannel, BaseMessageOptions } from 'discord.js';
-import { ButtonStyle } from 'discord.js';
+import { ButtonStyle, AttachmentBuilder } from 'discord.js';
 import database from '../database';
 import { ActionRowBuilder, ButtonBuilder, EmbedBuilder } from '@discordjs/builders';
 import GitHub from "../github";
 import type { PullRequest } from '../../types/global';
 import dayjs from 'dayjs';
+import env from '../config/env';
 
 @autoInjectable()
 class PRService {
@@ -39,7 +40,7 @@ class PRService {
 
                 entity.status = PRStatus.Deleted;
             } else if (gh_entity.data.merged) {
-                console.log(gh_entity.data);
+                
                 entity.status = PRStatus.Merged;
 
                 await thread?.setArchived(true, gh_entity.data.merge_commit_sha ?? '');
@@ -107,9 +108,9 @@ class PRService {
       repo: string,
       body: string
     ) {
-        let name = `#${pr.number}: ${pr.title} by ${pr.user?.login ?? 'Unknown'} - (${repo})`;
+        let name = `#${pr.number}: ${pr.title} by ${pr.user?.login ?? 'Unknown'}`;
         if (name.length > 100) {
-          name = `#${pr.number}: ${pr.title.substring(0, pr.title.length - (name.length - 100))} by ${pr.user?.login ?? 'Unknown'} - (${repo})`
+          name = `#${pr.number}: ${pr.title.substring(0, pr.title.length - (name.length - 100))} by ${pr.user?.login ?? 'Unknown'}`
         }
 
         const message = this.buildPrPost(pr, body);
@@ -120,6 +121,15 @@ class PRService {
               message: message
           });
           return t;
+        }
+
+        const tag = env.github.tags[env.github.repos.indexOf(repo)];
+
+        if (thread.appliedTags.length === 0) {
+          const tag_id = await (thread.parent as ForumChannel).availableTags.find(t => t.name === tag)?.id;
+          if (tag_id) {
+            thread.setAppliedTags([tag_id]);
+          }
         }
 
         thread.setName(name);
@@ -172,16 +182,42 @@ class PRService {
       }
     }
 
+    public makeButtons(pr: number) {
+      return new ActionRowBuilder<ButtonBuilder>()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId(`${pr}-pr-button`)
+                .setLabel("PR number")
+                .setStyle(ButtonStyle.Primary),
+              new ButtonBuilder()
+                .setCustomId(`${pr}-comment-button`)
+                .setLabel("Add comment")
+                .setStyle(ButtonStyle.Success),
+              new ButtonBuilder()
+                .setCustomId(`${pr}-refresh-button`)
+                .setLabel("Refresh")
+                .setStyle(ButtonStyle.Danger)
+            )
+    }
+
     private cleanBody(body: string) {
       let cleaned = body;
 
       cleaned = cleaned.replace(/<img.*?>/g, '');
+      cleaned = cleaned.replace(/!\[.*?\]\((.*?)\)/g, '$1');
 
       return cleaned.length > 6000 ? cleaned.substring(0, 5997) + "..." : cleaned;
     }
 
     private buildPrPost(pr: PullRequest, body: string): BaseMessageOptions {
+      const images = body.match(/!\[.*?\]\((.*?)\)/g);
+      const files: AttachmentBuilder[] = [];
+      for(const image of images ?? []) {
+        files.push(new AttachmentBuilder(image.replace(/!\[.*?\]\((.*?)\)/g, '$1')));
+      }
+
       return {
+        files: files,
         embeds: [
           new EmbedBuilder()
             .addFields({
@@ -203,25 +239,9 @@ class PRService {
                 value: pr.html_url
             }),
           new EmbedBuilder()
-            .setDescription(body)
+            .setDescription(this.cleanBody(body))
         ],
-        components: [
-          new ActionRowBuilder<ButtonBuilder>()
-            .addComponents(
-              new ButtonBuilder()
-                .setCustomId(`${pr.number}-pr-button`)
-                .setLabel("PR number")
-                .setStyle(ButtonStyle.Primary),
-              new ButtonBuilder()
-                .setCustomId(`${pr.number}-comment-button`)
-                .setLabel("Add comment")
-                .setStyle(ButtonStyle.Success),
-              new ButtonBuilder()
-                .setCustomId(`${pr.number}-refresh-button`)
-                .setLabel("Refresh")
-                .setStyle(ButtonStyle.Danger)
-            )
-        ]
+        components: [this.makeButtons(pr.number)]
       };
     }
 }

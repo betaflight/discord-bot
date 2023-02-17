@@ -42,8 +42,6 @@ export class PrRefreshButtonHandler extends InteractionHandler {
             ephemeral: true,
         })
 
-        console.log(entity, interaction.channel?.type);
-
         if (entity && interaction.channel?.type === ChannelType.PublicThread) {
             const gh_pr = (await this.github.getPullRequest(entity.repo_name, parseInt(pr))).data as PullRequest;
 
