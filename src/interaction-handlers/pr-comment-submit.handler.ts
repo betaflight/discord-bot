@@ -50,7 +50,7 @@ export class PrCommentSubmitHandler extends InteractionHandler {
 
         const comment = await this.github.addComment(entity.repo_name, parseInt(pr), body, interaction.user);
 
-        await this.pr_service.processComments(thread, parseInt(pr));
+        await this.pr_service.processComments(entity, thread, parseInt(pr));
 
         return await interaction.reply({
             ephemeral: true,
