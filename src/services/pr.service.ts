@@ -44,7 +44,7 @@ class PRService {
                 }
 
                 entity.status = PRStatus.Deleted;
-            } else if (!env.labels.some((l) => gh_entity.data.labels.some((label) => label.name.toLowerCase() === l))) {
+            } else if (!env.labels.some((l) => gh_entity.data.labels.some((label) => label.name.toLowerCase() === l.toLowerCase()))) {
                 entity.status = PRStatus.Tested;
 
                 await thread?.setArchived(true, 'pr tested');
@@ -63,14 +63,18 @@ class PRService {
         let entity = await database.repos.PullRequestRepository.findOneBy({
             github_number: pr.number,
             repo_name,
-            status: In([PRStatus.Open, PRStatus.Testing, PRStatus.Unset])
         });
+
+        if ([PRStatus.Deleted, PRStatus.Tested, PRStatus.Merged].includes(entity?.status ?? -1)) {
+            return;
+        }
 
         if (!entity) {
             entity = new PullRequestEntity();
             entity.github_number = pr.number;
             entity.repo_name = repo_name;
             entity.name = pr.title;
+            entity.status = PRStatus.Testing;
         }
 
         let thread: ThreadChannel | null = null;
@@ -127,7 +131,10 @@ class PRService {
         if (!thread) {
             const t = await channel.threads.create({
                 name: name,
-                message: message
+                message: message,
+                appliedTags: [
+                    channel.availableTags.find(t => t.name === env.github.tags[env.github.repos.indexOf(repo)])?.id ?? null
+                ].filter(Boolean) as string[]
             });
             return t;
         }
