@@ -1,4 +1,3 @@
-import { *asdotenv } from 'dotenv';
 import { autoInjectable } from 'tsyringe';
 import { PRStatus, PullRequestEntity } from './../database/entities/pull_request.entity';
 import type { ForumChannel, ThreadChannel, BaseMessageOptions } from 'discord.js';
@@ -22,9 +21,9 @@ class PRService {
 
     public async clean(channel: ForumChannel) {
         const entities = await database.repos.PullRequestRepository.find({
-          where: {
-            status: In([PRStatus.Open, PRStatus.Testing, PRStatus.Unset])
-          }
+            where: {
+                status: In([PRStatus.Open, PRStatus.Testing, PRStatus.Unset])
+            }
         });
 
         for (let i = 0; i < entities.length; ++i) {
