@@ -63,6 +63,7 @@ class PRService {
         let entity = await database.repos.PullRequestRepository.findOneBy({
             github_number: pr.number,
             repo_name,
+            status: In([PRStatus.Open, PRStatus.Testing, PRStatus.Unset])
         });
 
         if (!entity) {
