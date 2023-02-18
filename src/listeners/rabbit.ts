@@ -17,7 +17,7 @@ export class ReactionListener extends Listener {
             })
             if (entity) {
                 entity.counter++;
-                database.manager.save(entity);
+                await database.manager.save(entity);
             }
         }
     }

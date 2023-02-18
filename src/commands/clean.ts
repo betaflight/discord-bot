@@ -31,18 +31,21 @@ export class CleanCommand extends Command {
             return await message.reply("Forum channel not configured, please run init command!");
         }
 
-        const guild = await message.guild!.fetch();
-        const channel: ForumChannel = (await guild.channels.fetch(forum_channel.value)) as ForumChannel;
+        if (message.guild) {
 
-        if (!channel) {
-            return await message.reply("Forum channel not found, please rerun init command!");
+            const guild = await message.guild.fetch();
+            const channel: ForumChannel = (await guild.channels.fetch(forum_channel.value)) as ForumChannel;
+
+            if (!channel) {
+                return await message.reply("Forum channel not found, please rerun init command!");
+            }
+
+            await this.prService.clean(channel);
+
+            await msg.edit({
+                content: "cleaned",
+            })
         }
-
-        await this.prService.clean(channel);
-
-        await msg.edit({
-            content: "cleaned",
-        })
         
         return null;
     }

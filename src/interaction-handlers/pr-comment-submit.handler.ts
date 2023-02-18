@@ -24,7 +24,7 @@ export class PrCommentSubmitHandler extends InteractionHandler {
         this.pr_service = new PRService();
     }
 
-    public override async parse(interaction: ModalSubmitInteraction) {
+    public override parse(interaction: ModalSubmitInteraction) {
         if (!interaction.customId?.endsWith("comment-modal")) return this.none();
 
         return this.some();
@@ -39,7 +39,14 @@ export class PrCommentSubmitHandler extends InteractionHandler {
             github_number: parseInt(pr)
         });
 
-        const thread = await interaction.guild?.channels.fetch(entity!.forum_thread_id) as ThreadChannel;
+        if (!entity) {
+            return await interaction.reply({
+                ephemeral: true,
+                content: 'Something went wrong! Bug un!t!',
+            });
+        }
+
+        const thread = await interaction.guild?.channels.fetch(entity.forum_thread_id) as ThreadChannel;
 
         if (!entity) {
             return await interaction.reply({

@@ -17,7 +17,7 @@ export class PrCommentHandler extends InteractionHandler {
         });
     }
 
-    public override async parse(interaction: ButtonInteraction) {
+    public override parse(interaction: ButtonInteraction) {
         if (!interaction.customId?.endsWith("comment-button")) return this.none();
 
         return this.some();

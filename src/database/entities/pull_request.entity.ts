@@ -12,34 +12,34 @@ export enum PRStatus {
 @Entity()
 export class PullRequestEntity {
   @PrimaryGeneratedColumn()
-  id!: number;
+      id!: number;
 
   @Column()
-  name!: string;
+      name!: string;
 
   @Column()
-  repo_name!: string;
+      repo_name!: string;
 
   @Column()
-  github_number!: number;
+      github_number!: number;
 
   @Column({
-    default: "",
+      default: "",
   })
-  forum_thread_id!: string;
+      forum_thread_id!: string;
 
   @Column({
-    default: "",
+      default: "",
   })
-  first_post_id!: string;
+      first_post_id!: string;
 
   @Column({
-    default: null,
+      default: null,
   })
-  last_comment_timestamp?: string;
+      last_comment_timestamp?: string;
 
   @Column({
-    default: PRStatus.Unset,
+      default: PRStatus.Unset,
   })
-  status!: PRStatus;
+      status!: PRStatus;
 }

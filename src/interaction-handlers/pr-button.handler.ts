@@ -10,12 +10,12 @@ export class PrButtonHandler extends InteractionHandler {
 
     public constructor(ctx: PieceContext, options: InteractionHandler.Options) {
         super(ctx, {
-        ...options,
-        interactionHandlerType: InteractionHandlerTypes.Button,
+            ...options,
+            interactionHandlerType: InteractionHandlerTypes.Button,
         });
     }
 
-    public override async parse(interaction: ButtonInteraction) {
+    public override parse(interaction: ButtonInteraction) {
         if (!interaction.customId?.endsWith("pr-button")) return this.none();
 
         return this.some();
@@ -25,8 +25,8 @@ export class PrButtonHandler extends InteractionHandler {
         const pr = interaction.customId?.replace("-pr-button", "");
 
         await interaction.reply({
-        ephemeral: true,
-        content: pr,
+            ephemeral: true,
+            content: pr,
         })
     }
 }

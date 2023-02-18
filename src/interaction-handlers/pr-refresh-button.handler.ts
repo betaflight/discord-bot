@@ -25,7 +25,7 @@ export class PrRefreshButtonHandler extends InteractionHandler {
         this.github = new GitHub();
     }
 
-    public override async parse(interaction: ButtonInteraction) {
+    public override parse(interaction: ButtonInteraction) {
         if (!interaction.customId?.endsWith("refresh-button")) return this.none();
 
         return this.some();

@@ -3,13 +3,13 @@ import { Entity, Column, PrimaryGeneratedColumn } from "typeorm";
 @Entity()
 export class RepositoryEntity {
   @PrimaryGeneratedColumn()
-  id!: number;
+      id!: number;
 
   @Column({
-    unique: true,
+      unique: true,
   })
-  name!: string;
+      name!: string;
 
   @Column()
-  github_id!: number;
+      github_id!: number;
 }

@@ -3,15 +3,15 @@ import { Entity, Column, PrimaryGeneratedColumn } from "typeorm";
 @Entity()
 export class ReactionCounterEntity {
   @PrimaryGeneratedColumn()
-  id!: number;
+      id!: number;
 
   @Column({
-    unique: true
+      unique: true
   })
-  user_id!: string;
+      user_id!: string;
 
   @Column({
-    default: 0
+      default: 0
   })
-  counter!: number;
+      counter!: number;
 }
