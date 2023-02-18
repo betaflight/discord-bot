@@ -1,3 +1,4 @@
+import { *asdotenv } from 'dotenv';
 import { autoInjectable } from 'tsyringe';
 import { PRStatus, PullRequestEntity } from './../database/entities/pull_request.entity';
 import type { ForumChannel, ThreadChannel, BaseMessageOptions } from 'discord.js';
@@ -8,6 +9,7 @@ import GitHub from "../github";
 import type { PullRequest } from '../../types/global';
 import dayjs from 'dayjs';
 import env from '../config/env';
+import { In } from 'typeorm';
 
 @autoInjectable()
 class PRService {
@@ -19,7 +21,11 @@ class PRService {
     }
 
     public async clean(channel: ForumChannel) {
-        const entities = await database.repos.PullRequestRepository.find();
+        const entities = await database.repos.PullRequestRepository.find({
+          where: {
+            status: In([PRStatus.Open, PRStatus.Testing, PRStatus.Unset])
+          }
+        });
 
         for (let i = 0; i < entities.length; ++i) {
             const entity = entities[i];
@@ -39,13 +45,16 @@ class PRService {
                 }
 
                 entity.status = PRStatus.Deleted;
+            } else if (!env.labels.some((l) => gh_entity.data.labels.some((label) => label.name.toLowerCase() === l))) {
+                entity.status = PRStatus.Tested;
+
+                await thread?.setArchived(true, 'pr tested');
             } else if (gh_entity.data.merged) {
                 
                 entity.status = PRStatus.Merged;
 
                 await thread?.setArchived(true, gh_entity.data.merge_commit_sha ?? '');
             }
-
 
             await database.repos.PullRequestRepository.save(entity);
         }
